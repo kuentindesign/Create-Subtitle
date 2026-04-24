@@ -1,0 +1,6 @@
+{
+  "name": "AI Subtitle Studio",
+  "description": "Professional AI-powered video subtitle generator. Supports single and bilingual subtitles from YouTube links or local uploads. Export directly to SRT format.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
