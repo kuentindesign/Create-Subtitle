@@ -1,6 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAi() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "undefined") {
+      throw new Error("Missing GEMINI_API_KEY. Please configure it in your environment variables.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export interface SubtitleConfig {
   sourceLanguage: string;
@@ -15,6 +26,7 @@ export async function generateSubtitles(
   config: SubtitleConfig
 ): Promise<string> {
   const { sourceLanguage, targetLanguage1, targetLanguage2, isBilingual } = config;
+  const ai = getAi();
 
   let prompt = `Transcribe the following audio/video into SRT (SubRip) format.
 Source Language: ${sourceLanguage || "Auto-detect"}

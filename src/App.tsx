@@ -36,11 +36,35 @@ export default function App() {
   const [srtResult, setSrtResult] = useState("");
   const [progress, setProgress] = useState("");
 
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setStatus("idle");
     }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+      setStatus("idle");
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
   const toBase64 = (file: Blob): Promise<string> => 
@@ -108,214 +132,225 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white font-sans text-black flex flex-col selection:bg-moma-blue selection:text-white">
       {/* Header */}
-      <header className="p-8 md:p-16 border-b-2 border-black">
-        <div className="max-w-7xl">
-          <h1 className="text-6xl md:text-9xl font-bold tracking-tighter text-moma-blue leading-[0.8] mb-8">
+      <header className="border-b-2 border-black">
+        <div className="max-w-7xl mx-auto px-6 md:px-8 py-4 flex items-end gap-10">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tighter text-moma-blue leading-none">
             CREATE<br />SUBTITLE
           </h1>
-          <div className="max-w-xl border-l-4 border-moma-blue pl-8 py-2 ml-5">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-moma-blue mb-4">Generative Audio Intelligence</p>
-            <p className="text-xl font-medium text-black leading-snug tracking-tight">
-              High-precision bilingual transcription. Minimalist architecture powered by advanced artificial intelligence.
+          <div className="hidden md:block border-l-2 border-moma-blue pl-6 py-0.5 ml-14">
+            <p className="text-[7px] font-black uppercase tracking-[0.3em] text-moma-blue mb-0.5">Generative Intelligence</p>
+            <p className="text-xs font-medium text-black leading-tight tracking-tight">
+              High-precision transcription service.
             </p>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-8 md:p-16 space-y-24">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-8 py-8 md:py-12 space-y-12">
         
-        {/* Step 01: Input Selection */}
-        <section className="space-y-12">
-          <div className="border-t-8 border-black pt-6">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] mb-8 flex items-center gap-2">
-              <span className="w-2 h-2 bg-moma-blue" /> Step 01 / Input
+        {/* Step 01 & 02 Container */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-x-20 items-stretch relative">
+          <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px bg-gray-100 -translate-x-1/2" />
+          
+          {/* Step 01: Input Selection */}
+          <section className="flex flex-col gap-4">
+            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-2">
+              <span className="w-2 h-2 bg-moma-blue" /> 01 / Input
             </h2>
-            <div className="relative group border-4 border-black p-12 md:p-20 hover:bg-moma-blue transition-all cursor-pointer overflow-hidden">
-              <div className="absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            <div 
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              className={`relative flex-1 group border-4 border-black p-10 flex items-center justify-center transition-all cursor-pointer overflow-hidden ${isDragging ? "bg-moma-blue" : "hover:bg-moma-blue"}`}
+            >
+              <div className={`absolute inset-0 bg-black transition-transform duration-300 ${isDragging ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
               <input
                 type="file"
                 accept="video/*,audio/*"
                 onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
               />
-              <div className="relative z-10 flex flex-col items-start">
+              <div className="relative z-10 flex items-center gap-6">
                 {file ? (
-                  <div className="flex items-center gap-6">
-                    <CheckCircle2 size={40} className="text-moma-blue group-hover:text-white" />
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-moma-blue group-hover:text-white mb-1">File Selected</p>
-                      <p className="text-xl font-black uppercase tracking-tighter truncate max-w-lg text-black group-hover:text-white">{file.name}</p>
+                  <>
+                    <CheckCircle2 size={24} className={`${isDragging ? "text-white" : "text-moma-blue"} group-hover:text-white shrink-0`} />
+                    <div className="min-w-0">
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${isDragging ? "text-white" : "text-moma-blue"} group-hover:text-white mb-0.5`}>Selected</p>
+                      <p className={`text-lg font-black uppercase tracking-tighter truncate ${isDragging ? "text-white" : "text-black"} group-hover:text-white`}>{file.name}</p>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="flex items-center gap-6">
-                    <Upload size={40} className="text-black group-hover:text-white" />
-                    <p className="text-sm font-black uppercase tracking-[0.4em] text-black group-hover:text-white">Click or Drop Media Source</p>
-                  </div>
+                  <>
+                    <Upload size={24} className={`${isDragging ? "text-white" : "text-black"} group-hover:text-white shrink-0`} />
+                    <p className={`text-base font-black uppercase tracking-[0.2em] ${isDragging ? "text-white" : "text-black"} group-hover:text-white`}>
+                      {isDragging ? "Release to Drop" : "Drop Media Source"}
+                    </p>
+                  </>
                 )}
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Step 02: Configuration */}
-        <section className="border-t-8 border-black pt-6 space-y-12">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-2">
-            <span className="w-2 h-2 bg-moma-blue" /> Step 02 / Config
-          </h2>
-          
-          <div className="space-y-12">
-            <div className="border-b-4 border-black pb-8 max-w-lg relative group">
-              <label className="text-[10px] font-black uppercase tracking-[0.4em] block mb-4 text-moma-blue">Source Detection</label>
-              <div className="relative">
-                <select
-                  value={sourceLang}
-                  onChange={(e) => setSourceLang(e.target.value)}
-                  className="w-full h-12 bg-transparent text-xl font-bold focus:outline-none appearance-none cursor-pointer pr-10"
-                >
-                  <option value="auto">Auto-detect Language</option>
-                  {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
-                </select>
-                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-black" size={20} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
-              <div className="space-y-4 border-b-4 border-black pb-4 relative group">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-moma-blue">Primary Target</label>
+          {/* Step 02: Configuration */}
+          <section className="space-y-6">
+            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-2">
+              <span className="w-2 h-2 bg-moma-blue" /> 02 / Config
+            </h2>
+            
+            <div className="space-y-8">
+              <div className="border-b-2 border-black pb-3 relative">
+                <label className="text-[11px] font-black uppercase tracking-[0.3em] block mb-2 text-moma-blue">Source Detection</label>
                 <div className="relative">
                   <select
-                    value={targetLang1}
-                    onChange={(e) => setTargetLang1(e.target.value)}
-                    className="w-full h-12 bg-transparent text-xl font-bold focus:outline-none appearance-none cursor-pointer pr-10"
+                    value={sourceLang}
+                    onChange={(e) => setSourceLang(e.target.value)}
+                    className="w-full h-12 bg-transparent text-lg font-bold focus:outline-none appearance-none cursor-pointer pr-10"
                   >
+                    <option value="auto">Auto-detect Language</option>
                     {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
                   </select>
                   <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-black" size={20} />
                 </div>
               </div>
-              <div className="space-y-4 border-b-4 border-black pb-4 relative group">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-moma-blue">Secondary Target</label>
-                  <button 
-                    onClick={() => setIsBilingual(!isBilingual)}
-                    className={`text-[8px] px-3 py-1 font-black uppercase tracking-widest border-2 transition-all ${
-                      isBilingual ? "bg-black text-white border-black" : "bg-transparent text-gray-300 border-gray-200"
-                    }`}
-                  >
-                    {isBilingual ? "Active" : "Off"}
-                  </button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2 border-b-2 border-black pb-2">
+                  <label className="text-[11px] font-black uppercase tracking-[0.3em] text-moma-blue">Primary Target</label>
+                  <div className="relative">
+                    <select
+                      value={targetLang1}
+                      onChange={(e) => setTargetLang1(e.target.value)}
+                      className="w-full h-12 bg-transparent text-lg font-bold focus:outline-none appearance-none cursor-pointer pr-10"
+                    >
+                      {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-black" size={20} />
+                  </div>
                 </div>
-                <div className="relative">
-                  <select
-                    value={targetLang2}
-                    disabled={!isBilingual}
-                    onChange={(e) => setTargetLang2(e.target.value)}
-                    className={`w-full h-12 bg-transparent text-xl font-bold focus:outline-none appearance-none cursor-pointer pr-10 ${!isBilingual ? "opacity-10 cursor-not-allowed" : ""}`}
-                  >
-                    {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
-                  </select>
-                  <ChevronDown className={`absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-black ${!isBilingual ? "opacity-10" : ""}`} size={20} />
+                <div className="space-y-2 border-b-2 border-black pb-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[11px] font-black uppercase tracking-[0.3em] text-moma-blue">Bilingual Mode</label>
+                    <button 
+                      onClick={() => setIsBilingual(!isBilingual)}
+                      className={`text-[9px] px-2 py-1 font-black uppercase tracking-widest border-2 transition-all ${
+                        isBilingual ? "bg-black text-white border-black" : "bg-transparent text-gray-300 border-gray-200"
+                      }`}
+                    >
+                      {isBilingual ? "ON" : "OFF"}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <select
+                      value={targetLang2}
+                      disabled={!isBilingual}
+                      onChange={(e) => setTargetLang2(e.target.value)}
+                      className={`w-full h-12 bg-transparent text-lg font-bold focus:outline-none appearance-none cursor-pointer pr-10 ${!isBilingual ? "opacity-10 cursor-not-allowed" : ""}`}
+                    >
+                      {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
+                    </select>
+                    <ChevronDown className={`absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-black ${!isBilingual ? "opacity-10" : ""}`} size={20} />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
+        </div>
 
-          <div className="pt-8">
-            <button
-              disabled={status === "processing" || !file}
-              onClick={generate}
-              className="group relative w-full bg-moma-blue text-white font-black h-24 text-2xl tracking-tighter uppercase transition-all hover:opacity-90 disabled:bg-moma-blue/30 disabled:text-white/50 overflow-hidden"
-            >
-              <span className="relative z-10 flex items-center justify-center gap-6">
-                {status === "processing" ? (
-                  <>
-                    <Loader2 className="animate-spin" size={32} />
-                    {progress}
-                  </>
-                ) : (
-                  "Generate Subtitles"
-                )}
-              </span>
-            </button>
-          </div>
-        </section>
-
-        {/* Step 03: Result Output */}
-        <section className="border-t-8 border-black pt-6">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-2">
-              <span className="w-2 h-2 bg-moma-blue" /> Step 03 / Output
-            </h2>
-            {status === "success" && (
-              <button
-                onClick={downloadSrt}
-                className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.3em] text-moma-blue hover:text-black transition-colors"
-              >
-                <Download size={20} />
-                Export.srt
-              </button>
+        <button
+          disabled={status === "processing" || !file}
+          onClick={generate}
+          className="group relative w-full bg-moma-blue text-white font-black h-16 text-lg tracking-[0.2em] uppercase transition-all hover:bg-black active:scale-[0.98] disabled:bg-moma-blue/40 disabled:text-white/60 overflow-hidden"
+        >
+          <span className="relative z-10 flex items-center justify-center gap-3">
+            {status === "processing" ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                {progress}
+              </>
+            ) : (
+              "Generate Subtitles"
             )}
-          </div>
+          </span>
+        </button>
 
-          <div className="min-h-[600px] border-4 border-black relative bg-[#F9F9F9] overflow-hidden group">
-            <AnimatePresence mode="wait">
-              {status === "success" ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="absolute inset-0 overflow-auto p-12 font-mono text-base leading-relaxed"
-                >
-                  <pre className="whitespace-pre-wrap selection:bg-moma-blue selection:text-white">{srtResult}</pre>
-                </motion.div>
-              ) : status === "processing" ? (
-                <motion.div 
-                  key="processing"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0 flex flex-col items-center justify-center space-y-12"
-                >
-                  <div className="w-32 h-32 border-8 border-black border-t-moma-blue animate-spin" />
-                  <p className="text-xl font-black uppercase tracking-[0.6em] text-moma-blue animate-pulse">{progress}</p>
-                </motion.div>
-              ) : status === "error" ? (
-                <motion.div 
-                  key="error"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0 flex flex-col items-center justify-center p-16 text-center"
-                >
-                  <AlertCircle size={80} className="text-red-600 mb-8" />
-                  <h3 className="text-2xl font-black uppercase tracking-[0.3em] mb-4">Error / Failure</h3>
-                  <p className="text-md leading-relaxed text-gray-400 mb-12 max-w-sm mx-auto">{errorMsg}</p>
-                  <button onClick={() => setStatus("idle")} className="text-[13px] font-black uppercase tracking-[0.5em] border-4 border-black px-10 py-5 hover:bg-black hover:text-white transition-all">Clear Terminal</button>
-                </motion.div>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-200 p-16 text-center">
-                  <FileText size={120} className="mb-8 opacity-10" />
-                  <p className="text-[12px] font-black uppercase tracking-[1em] mb-4">Terminal Standby</p>
-                  <p className="text-[10px] font-bold opacity-30 tracking-[0.5em]">SYSTEM STATUS: AWAITING INPUT SEQUENCE</p>
+        {/* Step 03: Result Output (Only shown when active) */}
+        <AnimatePresence>
+          {status !== "idle" && (
+            <motion.section 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="border-t-8 border-black pt-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-2">
+                  <span className="w-2 h-2 bg-moma-blue" /> 03 / Output
+                </h2>
+                {status === "success" && (
+                  <button
+                    onClick={downloadSrt}
+                    className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-moma-blue hover:text-black transition-colors"
+                  >
+                    <Download size={14} />
+                    Export.srt
+                  </button>
+                )}
+              </div>
+
+              <div className="border-4 border-black relative bg-[#F9F9F9] overflow-hidden min-h-[400px]">
+                <AnimatePresence mode="wait">
+                  {status === "success" ? (
+                    <motion.div
+                      key="success"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute inset-0 overflow-auto p-8 font-mono text-[11px] leading-relaxed"
+                    >
+                      <pre className="whitespace-pre-wrap selection:bg-moma-blue selection:text-white">{srtResult}</pre>
+                    </motion.div>
+                  ) : status === "processing" ? (
+                    <motion.div 
+                      key="processing"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute inset-0 flex flex-col items-center justify-center space-y-4"
+                    >
+                      <div className="w-12 h-12 border-4 border-black border-t-moma-blue animate-spin" />
+                      <p className="text-xs font-black uppercase tracking-[0.3em] text-moma-blue animate-pulse">{progress}</p>
+                    </motion.div>
+                  ) : status === "error" ? (
+                    <motion.div 
+                      key="error"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"
+                    >
+                      <AlertCircle size={32} className="text-red-600 mb-3" />
+                      <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-1">Error</h3>
+                      <p className="text-[10px] text-gray-400 mb-4 max-w-[200px] mx-auto">{errorMsg}</p>
+                      <button onClick={() => setStatus("idle")} className="text-[8px] font-black uppercase tracking-[0.3em] border-2 border-black px-3 py-1.5 hover:bg-black hover:text-white transition-all">Retry</button>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+
+              <div className="flex items-center justify-between shrink-0 pt-2 opacity-50">
+                <div className="flex gap-6">
+                  <div className="flex flex-col">
+                    <span className="text-[6px] font-black uppercase tracking-widest text-gray-400">Processor</span>
+                    <span className="text-[8px] font-black">CORTEX GEN-2</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[6px] font-black uppercase tracking-widest text-gray-400">Environment</span>
+                    <span className="text-[8px] font-black">LIVE</span>
+                  </div>
                 </div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="mt-8 flex items-center justify-between border-b-2 border-black pb-6">
-            <div className="flex items-center gap-12">
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Processor</span>
-                <span className="text-[11px] font-black text-black">CORTEX GEN-2</span>
+                <div className="h-3 w-3 bg-moma-blue animate-pulse" />
               </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Environment</span>
-                <span className="text-[11px] font-black text-black">PRODUCTION-READY</span>
-              </div>
-            </div>
-            <div className="h-6 w-6 bg-moma-blue animate-pulse" />
-          </div>
-        </section>
+            </motion.section>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Footer */}
