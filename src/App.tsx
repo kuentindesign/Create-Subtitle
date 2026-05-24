@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { generateSubtitles, SubtitleConfig } from "./services/geminiService";
+import { generateSubtitles, generateTranscript, SubtitleConfig } from "./services/geminiService";
 import { 
   Upload, 
   Download, 
@@ -30,13 +30,15 @@ export default function App() {
   const [sourceLang, setSourceLang] = useState("auto");
   const [targetLang1, setTargetLang1] = useState("en");
   const [targetLang2, setTargetLang2] = useState("zh");
-  const [isBilingual, setIsBilingual] = useState(true);
+  const [isBilingual, setIsBilingual] = useState(false);
   const [status, setStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [srtResult, setSrtResult] = useState("");
   const [progress, setProgress] = useState("");
+  const [mode, setMode] = useState<"subtitles" | "transcript">("subtitles");
 
   const [isDragging, setIsDragging] = useState(false);
+  const isCancelledRef = useRef(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -78,7 +80,15 @@ export default function App() {
       reader.onerror = error => reject(error);
     });
 
+  const stopGeneration = () => {
+    isCancelledRef.current = true;
+    setStatus("idle");
+    setSrtResult("");
+    setProgress("");
+  };
+
   const generate = async () => {
+    isCancelledRef.current = false;
     setStatus("processing");
     setProgress("Initializing...");
     setSrtResult("");
@@ -95,34 +105,58 @@ export default function App() {
         throw new Error("Please provide a file");
       }
 
-      setProgress("AI generating subtitles (Gemini)...");
-      const config: SubtitleConfig = {
-        sourceLanguage: sourceLang,
-        targetLanguage1: targetLang1,
-        targetLanguage2: isBilingual ? targetLang2 : undefined,
-        isBilingual,
-      };
+      if (isCancelledRef.current) return;
 
-      const result = await generateSubtitles(base64Data, mimeType, config);
-      
-      // Sanitize result to strip markdown code blocks if present
-      const sanitized = result.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
-      
-      setSrtResult(sanitized);
+      if (mode === "subtitles") {
+        setProgress("AI generating subtitles (Gemini)...");
+        const config: SubtitleConfig = {
+          sourceLanguage: sourceLang,
+          targetLanguage1: targetLang1,
+          targetLanguage2: isBilingual ? targetLang2 : undefined,
+          isBilingual,
+        };
+        const result = await generateSubtitles(base64Data, mimeType, config);
+        
+        if (isCancelledRef.current) return;
+
+        // Sanitize result to strip markdown code blocks if present
+        const sanitized = result.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
+        setSrtResult(sanitized);
+      } else {
+        setProgress("AI transcribing audio to text...");
+        const result = await generateTranscript(base64Data, mimeType, targetLang1);
+        
+        if (isCancelledRef.current) return;
+        
+        setSrtResult(result);
+      }
+
+      if (isCancelledRef.current) return;
       setStatus("success");
     } catch (err: any) {
+      if (isCancelledRef.current) return;
       console.error(err);
-      setErrorMsg(err.message || "An error occurred");
+      let msg = "An error occurred";
+      if (err.message) msg = err.message;
+      if (err.details) msg = `${msg} (${err.details})`;
+      
+      // Handle the case where the message contains the RAW JSON error from Google
+      if (msg.includes("API key not valid")) {
+        msg = "Invalid API Key. Please check your Gemini API key in project settings.";
+      }
+
+      setErrorMsg(msg);
       setStatus("error");
     }
   };
 
-  const downloadSrt = () => {
+  const downloadResult = () => {
+    const isTxt = mode === "transcript";
     const blob = new Blob([srtResult], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `subtitles_${new Date().getTime()}.srt`;
+    a.download = `${isTxt ? "transcript" : "subtitles"}_${new Date().getTime()}.${isTxt ? "txt" : "srt"}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -214,6 +248,35 @@ export default function App() {
                 </div>
               </div>
 
+              <div className="space-y-4 border-b-2 border-black pb-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-[11px] font-black uppercase tracking-[0.3em] text-moma-blue">Export Format</label>
+                  <div className="flex bg-gray-100 p-1">
+                    <button 
+                      onClick={() => setMode("subtitles")}
+                      className={`text-[9px] px-3 py-1 font-black uppercase tracking-widest transition-all ${
+                        mode === "subtitles" ? "bg-black text-white" : "text-gray-400 hover:text-black"
+                      }`}
+                    >
+                      SRT
+                    </button>
+                    <button 
+                      onClick={() => setMode("transcript")}
+                      className={`text-[9px] px-3 py-1 font-black uppercase tracking-widest transition-all ${
+                        mode === "transcript" ? "bg-black text-white" : "text-gray-400 hover:text-black"
+                      }`}
+                    >
+                      TXT
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[9px] leading-tight text-gray-400 font-medium">
+                  {mode === "subtitles" 
+                    ? "Standard subtitle format with high-precision timestamps." 
+                    : "Plain text transcription. No timestamps, just words."}
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2 border-b-2 border-black pb-2">
                   <label className="text-[11px] font-black uppercase tracking-[0.3em] text-moma-blue">Primary Target</label>
@@ -269,7 +332,7 @@ export default function App() {
                 {progress}
               </>
             ) : (
-              "Generate Subtitles"
+              mode === "subtitles" ? "Generate Subtitles" : "Export Pure Text"
             )}
           </span>
         </button>
@@ -289,11 +352,11 @@ export default function App() {
                 </h2>
                 {status === "success" && (
                   <button
-                    onClick={downloadSrt}
+                    onClick={downloadResult}
                     className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-moma-blue hover:text-black transition-colors"
                   >
                     <Download size={14} />
-                    Export.srt
+                    {mode === "subtitles" ? "Export .srt" : "Export .txt"}
                   </button>
                 )}
               </div>
@@ -316,8 +379,16 @@ export default function App() {
                       animate={{ opacity: 1 }}
                       className="absolute inset-0 flex flex-col items-center justify-center space-y-4"
                     >
-                      <div className="w-12 h-12 border-4 border-black border-t-moma-blue animate-spin" />
-                      <p className="text-xs font-black uppercase tracking-[0.3em] text-moma-blue animate-pulse">{progress}</p>
+                      <div className="w-12 h-12 border-4 border-black border-t-moma-blue animate-spin mb-4" />
+                      <p className="text-xs font-black uppercase tracking-[0.3em] text-moma-blue animate-pulse mb-8">{progress}</p>
+                      
+                      <button 
+                        onClick={stopGeneration}
+                        className="text-[9px] font-black uppercase tracking-[0.3em] bg-red-600 text-white px-8 py-3 hover:bg-black transition-all flex items-center gap-2"
+                      >
+                        <span className="w-1.5 h-1.5 bg-white animate-pulse" />
+                        Stop Processing
+                      </button>
                     </motion.div>
                   ) : status === "error" ? (
                     <motion.div 
